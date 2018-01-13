@@ -1,4 +1,45 @@
 <?php
+
+$connections = array_map(
+    function($item)
+    {
+        return [
+            'adapter' => $item['driver'],
+            # Connection class. One of the Propel\Runtime\Connection classes
+            'classname' => (app('config')->get('app.debug') ? \Propel\Runtime\Connection\ProfilerConnectionWrapper::class : \Propel\Runtime\Connection\ConnectionWrapper::class),
+            # The PDO dsn
+            'dsn' => $item['driver'] . ':host=' . $item['host'] . ';port=' . (empty($item['port']) ? '3306' : $item['port']) . ';dbname=' . $item['database'],
+            'user' => $item['username'],
+            'password' => $item['password'],
+            # Driver options. See http' => '//www.php.net/manual/en/pdo.construct.php
+            # options must be passed to the contructor of the connection object
+            'options' => [],
+            # See http://www.php.net/manual/en/pdo.getattribute.php
+            # Attributes are set via `setAttribute()` method, after the connection object is created
+            'attributes' => [],
+            #Propel specific settings
+            'settings' => [
+                'charset' => $item['charset'],
+                #Array of queries to run when the database connection is initialized
+                'query' => [
+                    'SET NAMES utf8 COLLATE utf8_unicode_ci, COLLATION_CONNECTION = utf8_unicode_ci, COLLATION_DATABASE = utf8_unicode_ci, COLLATION_SERVER = utf8_unicode_ci'
+                ],
+            ],
+            'slaves' => [
+                //[
+                //    'dsn' => 'mysq:host=slave-host-1;dbname=bookstore',
+                //],
+            ],
+        ];
+    },
+    array_filter(
+        app('config')->get('database.connections'),
+        function($item) {
+            return in_array($item['driver'], ['pgsql', 'mysql']);
+        }
+    )
+);
+
 return [
     'propel' => [
         'general' => [
@@ -42,45 +83,7 @@ return [
         'database' => [
             # All database sources
             /***** We use data from database.php, please do not change this if you do not understand this code.  *****/
-            'connections' => array_map(
-                function($item)
-                {
-                    return [
-                        'adapter' => $item['driver'],
-                        # Connection class. One of the Propel\Runtime\Connection classes
-                        'classname' => (app('config')->get('app.debug') ? \Propel\Runtime\Connection\ProfilerConnectionWrapper::class : \Propel\Runtime\Connection\ConnectionWrapper::class),
-                        # The PDO dsn
-                        'dsn' => $item['driver'] . ':host=' . $item['host'] . ';port=' . (empty($item['port']) ? '3306' : $item['port']) . ';dbname=' . $item['database'],
-                        'user' => $item['username'],
-                        'password' => $item['password'],
-                        # Driver options. See http' => '//www.php.net/manual/en/pdo.construct.php
-                        # options must be passed to the contructor of the connection object
-                        'options' => [],
-                        # See http://www.php.net/manual/en/pdo.getattribute.php
-                        # Attributes are set via `setAttribute()` method, after the connection object is created
-                        'attributes' => [],
-                        #Propel specific settings
-                        'settings' => [
-                            'charset' => $item['charset'],
-                            #Array of queries to run when the database connection is initialized
-                            'query' => [
-                                'SET NAMES utf8 COLLATE utf8_unicode_ci, COLLATION_CONNECTION = utf8_unicode_ci, COLLATION_DATABASE = utf8_unicode_ci, COLLATION_SERVER = utf8_unicode_ci'
-                            ],
-                        ],
-                        'slaves' => [
-                            //[
-                            //    'dsn' => 'mysq:host=slave-host-1;dbname=bookstore',
-                            //],
-                        ],
-                    ];
-                },
-                array_filter(
-                    app('config')->get('database.connections'),
-                    function($item) {
-                        return in_array($item['driver'], ['pgsql', 'mysql']);
-                    }
-                )
-            ),
+            'connections' => $connections,
 
             ## Specific adapter settings
             'adapters' => [
@@ -137,9 +140,7 @@ return [
             'defaultConnection' => app('config')->get('database.default'),
             # Datasources as defined in database.connections
             # This section affects config:convert command
-            'connections' => [
-                app('config')->get('database.default'),
-            ],
+            'connections' => ['default', app('config')->get('database.default')],
             ## Log and loggers definitions ##
             # For `type` and `level` options see Monolog documentation https://github.com/Seldaek/monolog
             'log' => [
@@ -175,10 +176,10 @@ return [
                         'precision' => 3,
                         'pad' => 8,
                     ],
-                    'memory' => [
-                        'precision' => 3,
-                        'pad' => 8,
-                    ],
+//                    'memory' => [
+//                        'precision' => 3,
+//                        'pad' => 8,
+//                    ],
                     'memDelta' => [
                         'precision' => 3,
                         'pad' => 8,
@@ -196,9 +197,7 @@ return [
         'generator' => [
             'defaultConnection' => app('config')->get('database.default'),
             # Datasources as defined in database.connections
-            'connections' => [
-                app('config')->get('database.default'),
-            ],
+            'connections' => ['default', app('config')->get('database.default')],
 
             # Add a prefix to all the table names in the database.
             # This does not affect the tables phpName.
